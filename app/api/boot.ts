@@ -22,13 +22,19 @@ app.use("/api/trpc/*", async (c) => {
 });
 app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 
+// ALWAYS serve static files (not just in production)
+const { serveStatic } = await import("@hono/node-server/serve-static");
+
+// Serve CSS/JS assets from dist/public/assets/
+app.use('/assets/*', serveStatic({ root: './dist/public' }));
+
+// Serve index.html for ALL non-API routes (SPA fallback)
+app.get('*', serveStatic({ path: './dist/public/index.html' }));
+
 export default app;
 
 if (env.isProduction) {
   const { serve } = await import("@hono/node-server");
-  const { serveStaticFiles } = await import("./lib/vite");
-  serveStaticFiles(app);
-
   const port = parseInt(process.env.PORT || "3000");
   serve({ fetch: app.fetch, port }, () => {
     console.log(`Server running on http://localhost:${port}/`);
