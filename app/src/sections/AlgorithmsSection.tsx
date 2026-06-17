@@ -3,38 +3,17 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Grid3X3, TrendingUp, Brain } from 'lucide-react'
 
-// ── Voxel Grid System ────────────────────────────────────────────
-function GridSystem({ scrollProgress }: { scrollProgress: number }) {
-  const gridSize = 40
-  const spacing = 0.5
+// ── Inner 3D Scene (must be child of <Canvas>) ───────────────────
+function GridScene({ scrollProgress, boxes }: { scrollProgress: number; boxes: Array<<{
+  position: [number, number, number]
+  args: [number, number, number]
+  phase: number
+  id: string
+}> }) {
   const meshRefs = useRef<(THREE.Mesh | null)[]>([])
   const mouse = useRef(new THREE.Vector2(0, 0))
   const raycaster = useRef(new THREE.Raycaster())
   const hitPointCache = useRef(new THREE.Vector3(999, 999, 999))
-
-  const boxes = useMemo(() => {
-    const items: Array<{
-      position: [number, number, number]
-      args: [number, number, number]
-      phase: number
-      id: string
-    }> = []
-    const center = (gridSize * spacing) / 2 - spacing / 2
-    for (let x = 0; x < gridSize; x++) {
-      for (let y = 0; y < gridSize; y++) {
-        const posX = x * spacing - center
-        const posY = y * spacing - center
-        const baseDepth = 0.1
-        items.push({
-          position: [posX, posY, 0],
-          args: [0.4, 0.4, baseDepth],
-          phase: (x + y) * 0.2,
-          id: `box-${x}-${y}`,
-        })
-      }
-    }
-    return items
-  }, [])
 
   const handlePointerMove = useCallback((e: { nativeEvent: { clientX: number; clientY: number } }) => {
     mouse.current.x = (e.nativeEvent.clientX / window.innerWidth) * 2 - 1
@@ -76,35 +55,63 @@ function GridSystem({ scrollProgress }: { scrollProgress: number }) {
   })
 
   return (
+    <group onPointerMove={handlePointerMove}>
+      <ambientLight intensity={0.3} />
+      <pointLight position={[5, 5, 5]} intensity={1} color="#cd7f32" />
+      {boxes.map((box, i) => (
+        <mesh
+          key={box.id}
+          position={box.position}
+          ref={(el) => { meshRefs.current[i] = el }}
+        >
+          <boxGeometry args={box.args} />
+          <meshStandardMaterial
+            color="#1a1a1a"
+            roughness={0.6}
+            metalness={0.2}
+          />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+// ── Voxel Grid System ────────────────────────────────────────────
+function GridSystem({ scrollProgress }: { scrollProgress: number }) {
+  const gridSize = 40
+  const spacing = 0.5
+
+  const boxes = useMemo(() => {
+    const items: Array<<{
+      position: [number, number, number]
+      args: [number, number, number]
+      phase: number
+      id: string
+    }> = []
+    const center = (gridSize * spacing) / 2 - spacing / 2
+    for (let x = 0; x < gridSize; x++) {
+      for (let y = 0; y < gridSize; y++) {
+        const posX = x * spacing - center
+        const posY = y * spacing - center
+        const baseDepth = 0.1
+        items.push({
+          position: [posX, posY, 0],
+          args: [0.4, 0.4, baseDepth],
+          phase: (x + y) * 0.2,
+          id: `box-${x}-${y}`,
+        })
+      }
+    }
+    return items
+  }, [])
+
+  return (
     <Canvas
-      onPointerMove={handlePointerMove}
       camera={{ position: [0, -5, 8], fov: 60 }}
       style={{ background: 'transparent' }}
       gl={{ antialias: true, alpha: true }}
     >
-      <ambientLight intensity={0.3} />
-      <pointLight position={[5, 5, 5]} intensity={1} color="#cd7f32" />
-      <group>
-        <meshStandardMaterial
-          attach="material"
-          color="#1a1a1a"
-          roughness={0.6}
-          metalness={0.2}
-        />
-        {boxes.map((box, i) => (
-          <mesh
-            key={box.id}
-            position={box.position}
-            ref={(el) => { meshRefs.current[i] = el }}
-          >
-            <meshStandardMaterial
-              color="#1a1a1a"
-              roughness={0.6}
-              metalness={0.2}
-            />
-          </mesh>
-        ))}
-      </group>
+      <GridScene scrollProgress={scrollProgress} boxes={boxes} />
     </Canvas>
   )
 }
@@ -119,7 +126,7 @@ interface AlgoCardProps {
 }
 
 function AlgoCard({ icon, title, description, features, delay }: AlgoCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<<HTMLDivElement>(null)
 
   return (
     <div
@@ -152,7 +159,7 @@ function AlgoCard({ icon, title, description, features, delay }: AlgoCardProps) 
 
 // ── Algorithms Section ───────────────────────────────────────────
 export function AlgorithmsSection() {
-  const sectionRef = useRef<HTMLElement>(null)
+  const sectionRef = useRef<<HTMLElement>(null)
   const scrollProgress = 0.3 // Could be driven by scroll observer
 
   const algorithms = [
